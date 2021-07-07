@@ -64,7 +64,7 @@ spec:
         # and CNI network config file on each node.
         - name: install-cni
           image: {{ calico_cni_image_repo }}:{{ calico_cni_image_tag }}
-          command: ["/opt/cni/bin/install"]
+          command: ["{{ (calico_version is version('v3.16.0', '<'))|ternary('/install-cni.sh','/opt/cni/bin/install') }}"]
           env:
             # Name of the CNI config file to create.
             - name: CNI_CONF_NAME
@@ -205,9 +205,6 @@ spec:
             # Set Felix logging to "info"
             - name: FELIX_LOGSEVERITYSCREEN
               value: "{{ calico_loglevel }}"
-            # Set Calico startup logging to "error"
-            - name: CALICO_STARTUP_LOGLEVEL
-              value: "{{ calico_node_startup_loglevel }}"
             # Enable or disable usage report
             - name: FELIX_USAGEREPORTINGENABLED
               value: "{{ calico_usage_reporting }}"

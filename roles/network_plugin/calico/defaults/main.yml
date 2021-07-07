@@ -50,7 +50,6 @@ calico_felix_prometheusprocessmetricsenabled: true
 
 # Set the agent log level. Can be debug, warning, info or fatal
 calico_loglevel: info
-calico_node_startup_loglevel: error
 
 # Enable or disable usage report to 'usage.projectcalico.org'
 calico_usage_reporting: false
@@ -97,6 +96,3 @@ typha_max_connections_lower_limit: 300
 typha_secure: false
 
 calico_feature_control: {}
-
-# Calico default BGP port
-calico_bgp_listen_port: 179
