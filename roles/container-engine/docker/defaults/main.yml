@@ -13,6 +13,10 @@ docker_repo_info:
 
 docker_cgroup_driver: systemd
 
+docker_dns_servers_strict: true
+
+docker_container_storage_setup: false
+
 yum_repo_dir: /etc/yum.repos.d
 
 # Fedora docker-ce repo
@@ -51,3 +55,41 @@ docker_remove_packages_apt:
   - docker
   - docker-engine
   - docker.io
+
+docker_plugins: []
+docker_insecure_registries: []
+docker_registry_mirrors: []
+docker_daemon_graph: "/var/lib/docker"
+docker_iptables_enabled: "false"
+docker_log_opts: "--log-opt max-size=50m --log-opt max-file=5"
+
+# Should be set to a cluster IP if using a custom cluster DNS
+manual_dns_server: ""
+
+# Can be docker_dns, host_resolvconf or none
+resolvconf_mode: docker_dns
+# Deploy netchecker app to verify DNS resolve as an HTTP service
+deploy_netchecker: false
+# Ip address of the kubernetes DNS service (called skydns for historical reasons)
+skydns_server: "{{ kube_service_addresses|ipaddr('net')|ipaddr(3)|ipaddr('address') }}"
+skydns_server_secondary: "{{ kube_service_addresses|ipaddr('net')|ipaddr(4)|ipaddr('address') }}"
+dns_domain: "{{ cluster_name }}"
+docker_dns_search_domains:
+- 'default.svc.{{ dns_domain }}'
+- 'svc.{{ dns_domain }}'
+
+kube_dns_servers:
+  coredns: ["{{skydns_server}}"]
+  coredns_dual: "{{[skydns_server] + [ skydns_server_secondary ]}}"
+  manual: ["{{manual_dns_server}}"]
+
+dns_servers: "{{kube_dns_servers[dns_mode]}}"
+kube_service_addresses: 10.233.0.0/18
+kube_service_addresses_ipv6: fd85:ee78:d8a6:8607::1000/116
+
+ndots: 2
+docker_dns_options:
+- ndots:{{ ndots }}
+- timeout:2
+- attempts:2
+dns_mode: coredns

@@ -25,10 +25,8 @@
     dest: "{{ yum_repo_dir }}/containerd.repo"
   when: ansible_distribution == "Fedora"
 
-- name: Configure containerd repository on RedHat/OracleLinux/CentOS/AlmaLinux
+- name: Configure containerd repository on RedHat/OracleLinux/CentOS
   template:
     src: "rh_containerd.repo.j2"
     dest: "{{ yum_repo_dir }}/containerd.repo"
-  when:
-    - ansible_os_family == "RedHat"
-    - ansible_distribution != "Fedora"
+  when: ansible_distribution in ["CentOS", "OracleLinux", "RedHat"]
