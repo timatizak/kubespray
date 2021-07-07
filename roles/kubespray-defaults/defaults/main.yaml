@@ -15,10 +15,10 @@ is_fedora_coreos: false
 disable_swap: true
 
 ## Change this to use another Kubernetes version, e.g. a current beta release
-kube_version: v1.20.6
+kubernetes_version: v1.20.5
 
 ## The minimum version working
-kube_version_min_required: v1.19.0
+kubernetes_version_min_required: v1.19.0
 
 ## Kube Proxy mode One of ['iptables','ipvs']
 kube_proxy_mode: ipvs
@@ -215,7 +215,6 @@ kube_override_hostname: >-
   {%- else -%}
   {{ inventory_hostname }}
   {%- endif -%}
-
 # dynamic kubelet configuration
 dynamic_kubelet_configuration: false
 
@@ -253,7 +252,6 @@ cri_socket: >-
   {%- else -%}
   /var/run/dockershim.sock
   {%- endif -%}
-
 ## Uncomment this if you want to force overlay/overlay2 as docker storage driver
 ## Please note that overlay2 is only supported on newer kernels
 # docker_storage_options: -s overlay2
@@ -265,8 +263,7 @@ docker_container_storage_setup: false
 ## Otherwise docker-storage-setup will be executed incorrectly.
 # docker_container_storage_setup_devs: /dev/vdb
 
-## Only set this if you have more than 3 nameservers:
-## If true Kubespray will only use the first 3, otherwise it will fail
+## Uncomment this if you have more than 3 nameservers, then we'll only use the first 3.
 docker_dns_servers_strict: false
 
 # Path used to store Docker data
@@ -361,9 +358,6 @@ cert_manager_enabled: false
 expand_persistent_volumes: false
 metallb_enabled: false
 
-# containerd official CLI tool
-nerdctl_enabled: false
-
 ## When OpenStack is used, Cinder version can be explicitly specified if autodetection fails (Fixed in 1.9: https://github.com/kubernetes/kubernetes/issues/50461)
 # openstack_blockstorage_version: "v1/v2/auto (default)"
 openstack_blockstorage_ignore_volume_az: "{{ volume_cross_zone_attachment | default('false') }}"
@@ -425,7 +419,6 @@ kubelet_protect_kernel_defaults: true
 ## the k8s cluster.
 kube_feature_gates: []
 kubeadm_feature_gates: []
-
 # Local volume provisioner storage classes
 # Levarages Ansibles string to Python datatype casting. Otherwise the dict_key isn't substituted
 # see https://github.com/ansible/ansible/issues/17324
@@ -436,10 +429,8 @@ local_volume_provisioner_storage_classes: |
       "mount_dir": "{{ local_volume_provisioner_mount_dir | default('/mnt/disks') }}",
       "volume_mode": "Filesystem",
       "fs_type": "ext4"
-
     }
   }
-
 # weave's network password for encryption
 # if null then no network encryption
 # you can use --extra-vars to pass the password in command line
@@ -456,13 +447,12 @@ ssl_ca_dirs: |-
   '/usr/share/ca-certificates',
   {% endif -%}
   ]
-
 # Vars for pointing to kubernetes api endpoints
-is_kube_master: "{{ inventory_hostname in groups['kube_control_plane'] }}"
-kube_apiserver_count: "{{ groups['kube_control_plane'] | length }}"
+is_kube_master: "{{ inventory_hostname in groups[cluster_name + '_master'] }}"
+kube_apiserver_count: "{{ groups[cluster_name + '_master'] | length }}"
 kube_apiserver_address: "{{ ip | default(fallback_ips[inventory_hostname]) }}"
 kube_apiserver_access_address: "{{ access_ip | default(kube_apiserver_address) }}"
-first_kube_master: "{{ hostvars[groups['kube_control_plane'][0]]['access_ip'] | default(hostvars[groups['kube_control_plane'][0]]['ip'] | default(fallback_ips[groups['kube_control_plane'][0]])) }}"
+first_kube_master: "{{ hostvars[groups[cluster_name + '_master'][0]]['access_ip'] | default(hostvars[groups[cluster_name + '_master'][0]]['ip'] | default(fallback_ips[groups[cluster_name + '_master'][0]])) }}"
 loadbalancer_apiserver_localhost: "{{ loadbalancer_apiserver is not defined }}"
 loadbalancer_apiserver_type: "nginx"
 # applied if only external loadbalancer_apiserver is defined, otherwise ignored
@@ -494,10 +484,10 @@ kube_apiserver_client_key: "{{ kube_cert_dir }}/ca.key"
 etcd_events_cluster_enabled: false
 
 # etcd group can be empty when kubeadm manages etcd
-etcd_hosts: "{{ groups['etcd'] | default(groups['kube_control_plane']) }}"
+etcd_hosts: "{{ groups['etcd'] | default(groups[cluster_name + '_master']) }}"
 
 # Vars for pointing to etcd endpoints
-is_etcd_master: "{{ inventory_hostname in groups['etcd'] }}"
+is_etcd_master: "{{ inventory_hostname in groups[cluster_name + '_master'] }}"
 etcd_address: "{{ ip | default(fallback_ips[inventory_hostname]) }}"
 etcd_access_address: "{{ access_ip | default(etcd_address) }}"
 etcd_events_access_address: "{{ access_ip | default(etcd_address) }}"
@@ -519,18 +509,17 @@ etcd_events_access_addresses: "{{etcd_events_access_addresses_list | join(',')}}
 etcd_events_access_addresses_semicolon: "{{etcd_events_access_addresses_list | join(';')}}"
 # user should set etcd_member_name in inventory/mycluster/hosts.ini
 etcd_member_name: |-
-  {% for host in groups['etcd'] %}
+  {% for host in groups[cluster_name + '_master'] %}
   {%   if inventory_hostname == host %}{{ hostvars[host].etcd_member_name | default("etcd" + loop.index|string) }}{% endif %}
   {% endfor %}
 etcd_peer_addresses: |-
-  {% for item in groups['etcd'] -%}
+  {% for item in groups[cluster_name + '_master'] -%}
     {{ hostvars[item].etcd_member_name | default("etcd" + loop.index|string) }}=https://{{ hostvars[item].etcd_access_address | default(hostvars[item].ip | default(fallback_ips[item])) }}:2380{% if not loop.last %},{% endif %}
   {%- endfor %}
 etcd_events_peer_addresses: |-
-  {% for item in groups['etcd'] -%}
+  {% for item in groups[cluster_name + '_master'] -%}
     {{ hostvars[item].etcd_member_name | default("etcd" + loop.index|string) }}-events=https://{{ hostvars[item].etcd_events_access_address | default(hostvars[item].ip | default(fallback_ips[item])) }}:2382{% if not loop.last %},{% endif %}
   {%- endfor %}
-
 podsecuritypolicy_enabled: false
 etcd_heartbeat_interval: "250"
 etcd_election_timeout: "5000"
@@ -555,7 +544,6 @@ host_architecture: >-
   {%- else -%}
   {{ ansible_architecture }}
   {%- endif -%}
-
 # Sets the eventRecordQPS parameter in kubelet-config.yaml. The default value is 5 (see types.go)
 # Setting it to 0 allows unlimited requests per second.
 kubelet_event_record_qps: 5

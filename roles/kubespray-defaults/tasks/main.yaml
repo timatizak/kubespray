@@ -5,6 +5,10 @@
   tags:
     - always
 
+#- name: Necessary vars
+#  debug:
+#    msg: "Check all vars are entered"
+#    var: kubernetes_files_repo
 # do not run gather facts when bootstrap-os in roles
 - name: set fallback_ips
   import_tasks: fallback_ips.yml
