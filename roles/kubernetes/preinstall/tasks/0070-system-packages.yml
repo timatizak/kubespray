@@ -22,7 +22,7 @@
     path: "{{ yum_repo_dir }}/docker.repo"
     state: absent
   when:
-    - ansible_os_family == "RedHat"
+    - ansible_distribution in ["CentOS","RedHat","OracleLinux"]
     - not is_fedora_coreos
 
 - name: Install python3-dnf for latest RedHat versions
@@ -39,12 +39,12 @@
   tags:
     - bootstrap-os
 
-- name: Install epel-release on RHEL derivatives
+- name: Install epel-release on RedHat/CentOS
   package:
     name: epel-release
     state: present
   when:
-    - ansible_os_family == "RedHat"
+    - ansible_distribution in ["CentOS","RedHat"]
     - not is_fedora_coreos
     - epel_enabled|bool
   tags:
