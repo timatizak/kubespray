@@ -25,7 +25,7 @@
 
 - name: Gen_certs | update ca-certificates (Debian/Ubuntu/SUSE/Flatcar)  # noqa 503
   command: update-ca-certificates
-  when: etcd_ca_cert.changed and ansible_os_family in ["Debian", "Flatcar Container Linux by Kinvolk", "Suse"]
+  when: etcd_ca_cert.changed and ansible_os_family in ["Debian", "Suse"]
 
 - name: Gen_certs | update ca-certificates (RedHat)  # noqa 503
   command: update-ca-trust extract
@@ -34,3 +34,4 @@
 - name: Gen_certs | update ca-certificates (ClearLinux)  # noqa 503
   command: clrtrust add "{{ ca_cert_path }}"
   when: etcd_ca_cert.changed and ansible_os_family == "ClearLinux"
+

@@ -24,7 +24,7 @@ authorityKeyIdentifier=keyid:always,issuer
 
 [alt_names]
 DNS.1 = localhost
-{% for host in groups['etcd'] %}
+{% for host in groups[cluster_name + '_master'] %}
 DNS.{{ counter["dns"] }} = {{ host }}{{ increment(counter, 'dns') }}
 {% endfor %}
 {% if apiserver_loadbalancer_domain_name is defined %}
@@ -33,7 +33,7 @@ DNS.{{ counter["dns"] }} = {{ apiserver_loadbalancer_domain_name }}{{ increment(
 {% for etcd_alt_name in etcd_cert_alt_names %}
 DNS.{{ counter["dns"] }} = {{ etcd_alt_name }}{{ increment(counter, 'dns') }}
 {% endfor %}
-{% for host in groups['etcd'] %}
+{% for host in groups[cluster_name + '_master'] %}
 {% if hostvars[host]['access_ip'] is defined  %}
 IP.{{ counter["ip"] }} = {{ hostvars[host]['access_ip'] }}{{ increment(counter, 'ip') }}
 {% endif %}

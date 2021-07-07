@@ -4,7 +4,7 @@
     paths: "{{ etcd_cert_dir }}"
     patterns: "ca.pem,node*.pem,member*.pem,admin*.pem"
     get_checksum: true
-  delegate_to: "{{ groups['etcd'][0] }}"
+  delegate_to: "{{ groups[cluster_name + '_master'][0] }}"
   register: etcdcert_master
   run_once: true
 
@@ -21,7 +21,7 @@
     get_checksum: yes
     get_mime: no
   register: etcd_member_certs
-  when: inventory_hostname in groups['etcd']
+  when: inventory_hostname in groups[cluster_name + '_master']
   with_items:
     - ca.pem
     - member-{{ inventory_hostname }}.pem
@@ -34,7 +34,7 @@
     path: "{{ etcd_cert_dir }}/{{ item }}"
   register: etcd_node_certs
   when: (('calico-rr' in groups and inventory_hostname in groups['calico-rr']) or
-        inventory_hostname in groups['k8s-cluster'])
+        (inventory_hostname in groups[cluster_name + '_master'] or inventory_hostname in groups[cluster_name + '_slaves']))
   with_items:
     - ca.pem
     - node-{{ inventory_hostname }}.pem
@@ -49,14 +49,14 @@
   vars:
     expected_files: >-
       ['{{ etcd_cert_dir }}/ca.pem',
-      {% set etcd_members = groups['etcd'] %}
+      {% set etcd_members = groups[cluster_name + '_master'] %}
       {% for host in etcd_members %}
         '{{ etcd_cert_dir }}/admin-{{ host }}.pem',
         '{{ etcd_cert_dir }}/admin-{{ host }}-key.pem',
         '{{ etcd_cert_dir }}/member-{{ host }}.pem',
         '{{ etcd_cert_dir }}/member-{{ host }}-key.pem',
       {% endfor %}
-      {% set k8s_nodes = groups['k8s-cluster']|union(groups['calico-rr']|default([]))|unique|sort %}
+      {% set k8s_nodes = groups[cluster_name + '_master']|union(groups[cluster_name + '_slaves'])|unique|sort %}
       {% for host in k8s_nodes %}
         '{{ etcd_cert_dir }}/node-{{ host }}.pem',
         '{{ etcd_cert_dir }}/node-{{ host }}-key.pem'
@@ -67,7 +67,7 @@
   set_fact:
     gen_master_certs: |-
       {
-      {% set etcd_members = groups['etcd'] -%}
+      {% set etcd_members = groups[cluster_name + '_master'] -%}
       {% set existing_certs = etcdcert_master.files|map(attribute='path')|list|sort %}
       {% for host in etcd_members -%}
         {% set member_cert = "%s/member-%s.pem"|format(etcd_cert_dir, host) %}
@@ -89,7 +89,7 @@
   set_fact:
     gen_node_certs: |-
       {
-      {% set k8s_nodes = groups['k8s-cluster']|union(groups['calico-rr']|default([]))|unique|sort -%}
+      {% set k8s_nodes = groups[cluster_name + '_master']|union(groups[cluster_name + '_slaves'])|unique|sort -%}
       {% set existing_certs = etcdcert_master.files|map(attribute='path')|list|sort %}
       {% for host in k8s_nodes -%}
         {% set host_cert = "%s/node-%s.pem"|format(etcd_cert_dir, host) %}
@@ -109,7 +109,7 @@
   set_fact:
     etcd_member_requires_sync: true
   when:
-    - inventory_hostname in groups['etcd']
+    - inventory_hostname in groups[cluster_name + '_master']
     - (not etcd_member_certs.results[0].stat.exists|default(false)) or
       (not etcd_member_certs.results[1].stat.exists|default(false)) or
       (not etcd_member_certs.results[2].stat.exists|default(false)) or
@@ -126,8 +126,7 @@
     kubernetes_host_requires_sync: true
   when:
     - (('calico-rr' in groups and inventory_hostname in groups['calico-rr']) or
-      inventory_hostname in groups['k8s-cluster']) and
-      inventory_hostname not in groups['etcd']
+      inventory_hostname in groups[cluster_name + '_master'])
     - (not etcd_node_certs.results[0].stat.exists|default(false)) or
       (not etcd_node_certs.results[1].stat.exists|default(false)) or
       (not etcd_node_certs.results[2].stat.exists|default(false)) or
